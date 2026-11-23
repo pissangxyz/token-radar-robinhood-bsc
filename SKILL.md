@@ -191,7 +191,7 @@ Setelah jual, jangan biarkan izin (approval) token menggantung — kontrak jahat
 - **Eksekusi:** revoke adalah transaksi on-chain — sama seperti trade, butuh perintah eksplisit user + preview sebelum dikirim.
 
 ### Position sizing
-- Per token: **kecil, maksimal 2–5% dari bankroll sniper**. Jangan all-in satu token.
+- Per token: **2% dari bankroll sniper** — standar (diubah dari rentang 2–5% atas perintah user 2026-11-23 17:51 WIB). Jangan all-in satu token. Alasan: rug adalah pembunuh utama (3 dari 16 token mati di dua simulasi) dan hanya ukuran posisi yang melindungi dari rug — CL/trailing tidak bisa menyelamatkan token yang likuiditasnya ditarik. Dua rug dalam satu ronde = −4% bankroll (bukan −10% kalau 5% per token).
 
 ### Batasan eksekusi (penting, jangan dilanggar)
 - Skill ini mendefinisikan **aturan** sniper. Eksekusi live (bot + wallet + gas + dana) adalah langkah terpisah: butuh dana di wallet, dan **setiap transaksi tetap butuh preview + perintah eksplisit user** (aturan wallet yang berlaku). Jangan pernah klaim auto-trading sudah jalan kalau belum di-setup dan disetujui.
