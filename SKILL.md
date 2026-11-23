@@ -176,7 +176,7 @@ Begitu posisi masuk, jalanin loop ini terus sampai posisi keluar (polling tiap 1
 
 ### Jual otomatis (take profit + proteksi) — v2
 - **TP1 +100% (2x): jual 50%. TP2 +200% (3x): jual 25% lagi. Sisa 25%: trailing stop −30% dari puncak.**
-- **Stop-loss −50% dari entry. Max hold 24 jam.**
+- **Stop-loss (CL / cut-loss) −60% dari entry — diubah dari −50% atas perintah user 2026-11-23 17:44 WIB ("dari 50% jadi 60/70").** Max hold 24 jam. (Catatan: −70% tinggal bilang, satu kata — makin longgar makin dalam luka per token yang gagal, tapi makin besar ruang buat token yang sempat turun lalu balik naik.)
 - **BARU — auto-sell pemicu darurat (jual semua, segera):** GoPlus pasca-beli flag bahaya; dev jual (ambang di atas); likuiditas turun > 50% dalam 5 menit.
 - Urutan prioritas saat beberapa pemicu kena bersamaan: pemicu darurat > stop-loss > TP.
 - Slippage: catat toleransi sebelum masuk (pool tipis → slippage besar itu normal).
