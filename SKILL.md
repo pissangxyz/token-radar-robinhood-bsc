@@ -199,3 +199,17 @@ Simulasi pertama skill ini (8 token baru, 4 Robinhood + 4 BSC, umur 1–9 menit)
 - **Data GoPlus bisa basi untuk token sangat baru.** Contoh: CHOP (Robinhood) dilaporkan `creator_percent: 1.0` (creator pegang 100% supply) padahal `is_in_dex: 0` — GoPlus belum sinkron dengan pool-nya. Tetap vonis DANGER (flag ekstrem + tak terverifikasi), tapi tulis caveat-nya dan cek ulang beberapa jam kemudian.
 - **Saringan discovery bekerja.** Token dengan 1 transaksi / volume ~$0 (STONKS, NIKUMARU, MEMEFORGE di Robinhood; token four-meme bervolume $0.001 di BSC) langsung terbuang di Langkah 1 — jangan buang waktu cek keamanan untuk token mati.
 - **Hasil simulasi: 0 SAFE dari 8 kandidat, 1 DANGER (CHOP), 7 CAUTION.** Itu normal untuk pool berumur menit — radar ini memang dirancang untuk menolak memberkati yang belum terverifikasi, bukan untuk memaksa ada pemenang.
+
+## 8. Pelajaran dari simulasi Mode Sniper (2026-11-23 16:19 WIB)
+
+Simulasi sniper: 8 token yang sama dari simulasi pertama, dicek ulang ~8 menit setelah entry (~16:11 → ~16:19 WIB), pakai gate longgar (hanya anti-honeypot + kontrak berbahaya):
+
+- **Masuk (6):** CHOP +74% (lolos GoPlus, creator 100% bukan gate), DELULU −21% (ABI ERC20 bersih, tanpa mint/pause/blacklist), SHORT +130% (**TP1 kena, jual 50%**), 金狗 −100% (**RUG, likuiditas $141k → $0**), STINGRAY +19%, MuskTRUMP +72% (keduanya UNVERIFIED — GoPlus belum indeks, ABI BscScan tidak bisa diambil tanpa API key).
+- **Diblokir (2):** AI (+104%, TP1 kena — tapi kontrak **belum terverifikasi** → block) dan Shit (+85%, alasan sama). Gate keamanan membuang 2 peluang terbaik — trade-off nyata kecepatan vs keamanan.
+- **Pelajaran keras:**
+  1. Rug via tarik likuiditas TIDAK ketangkep gate sniper — 金狗 reserve terbesar ($141k) tetap rug 10 menit kemudian. LP lock sengaja bukan gate di mode ini; itu harga yang dibayar.
+  2. Stop-loss −50% tidak berguna kalau likuiditas ditarik (tidak ada pembeli — tidak bisa jual).
+  3. Verifikasi di menit ke-0 sering mustahil: GoPlus belum mengindeks 6/8 token bahkan setelah 15 menit; Blockscout API 403 via text fetch; BscScan tanpa API key mengalihkan ke halaman docs. Sniper sering masuk buta (UNVERIFIED).
+  4. Harga quoted ≠ harga fill — slippage di pool $10–60k brutal; jual 50% posisi bisa menggerakkan harga sendiri.
+  5. 0 sells = kemampuan jual belum terbukti (MuskTRUMP 26 buys / 0 sells).
+  6. Jendela 8 menit terlalu pendek untuk vonis — ini snapshot, bukan backtest.
