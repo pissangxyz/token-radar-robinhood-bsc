@@ -181,6 +181,15 @@ Begitu posisi masuk, jalanin loop ini terus sampai posisi keluar (polling tiap 1
 - Urutan prioritas saat beberapa pemicu kena bersamaan: pemicu darurat > stop-loss > TP.
 - Slippage: catat toleransi sebelum masuk (pool tipis → slippage besar itu normal).
 
+### Auto-revoke (baru — perintah user 2026-11-23 16:31 WIB)
+Setelah jual, jangan biarkan izin (approval) token menggantung — kontrak jahat bisa memakainya belakangan untuk menarik token lo.
+- **Kapan revoke:** (a) setelah posisi **tertutup penuh** (100% terjual — TP2/trailing/SL/max-hold/pemicu darurat yang menghabiskan posisi); (b) **segera** untuk token yang masuk blacklist; (c) sapu berkala tiap 24 jam: revoke approval token yang sudah tidak dipegang lagi.
+- **JANGAN revoke setelah jual parsial (TP1 50%)** — sisa posisi masih butuh approval untuk dijual nanti; revoke di situ cuma buang gas dan memaksa approve ulang.
+- **Caranya:** kirim `approve(spender, 0)` ke kontrak token. Spender yang di-revoke = router yang dipakai buat trade itu: PancakeSwap Router (BSC); Uniswap Universal Router / **Permit2** (Robinhood Chain — Uniswap v4 memakai Permit2, jadi revoke ke Permit2).
+- **Biaya:** 1 transaksi gas per revoke; murah di BSC dan Robinhood Chain (gas ETH recehan), tapi tetap dicatat sebagai biaya exit.
+- **Batasan jujur:** revoke melindungi dari penyalahgunaan allowance yang tersisa. Ia **TIDAK** mengembalikan dana yang sudah hilang, **TIDAK** mencegah rug likuiditas, dan **TIDAK** memperbaiki honeypot (kalau tidak bisa jual, revoke tidak ada gunanya). Beberapa token punya `approve()` yang aneh (revert saat set 0) — kalau revoke gagal, catat dan coba sekali lagi; jangan dipaksa berulang kali.
+- **Eksekusi:** revoke adalah transaksi on-chain — sama seperti trade, butuh perintah eksplisit user + preview sebelum dikirim.
+
 ### Position sizing
 - Per token: **kecil, maksimal 2–5% dari bankroll sniper**. Jangan all-in satu token.
 
