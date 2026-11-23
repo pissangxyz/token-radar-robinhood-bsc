@@ -148,3 +148,12 @@ Vonis: SAFE/CAUTION/DANGER (skor X/100) — alasan satu kalimat
 - "Cek token 0x... di BSC" → Langkah 2–4 untuk alamat itu, satu laporan lengkap.
 - "Pantau token X" → ulang Langkah 2–3 berkala; laporkan HANYA kalau vonis berubah atau ada red flag baru (jangan spam).
 - "Bandingin token A vs B" → jalankan Langkah 2–4 untuk keduanya, sajikan berdampingan.
+
+## 7. Pelajaran dari simulasi live (2026-11-23 16:11 WIB)
+
+Simulasi pertama skill ini (8 token baru, 4 Robinhood + 4 BSC, umur 1–9 menit) membuktikan pola penting:
+
+- **Token berumur menit hampir selalu BELUM terindeks alat keamanan.** GoPlus batch cuma mengembalikan token yang sudah terindeks — sisanya hilang diam-diam dari respons (bukan error). honeypot.is menjawab HTTP 404 `{"code":404,"error":"pair not found"}` untuk pair yang belum terindeks. Jadi: **hasil kosong/404 = "belum bisa dicek", BUKAN "aman".** Vonis maksimal untuk token yang safety screen-nya tidak jalan adalah CAUTION — jangan pernah naikkan ke SAFE.
+- **Data GoPlus bisa basi untuk token sangat baru.** Contoh: CHOP (Robinhood) dilaporkan `creator_percent: 1.0` (creator pegang 100% supply) padahal `is_in_dex: 0` — GoPlus belum sinkron dengan pool-nya. Tetap vonis DANGER (flag ekstrem + tak terverifikasi), tapi tulis caveat-nya dan cek ulang beberapa jam kemudian.
+- **Saringan discovery bekerja.** Token dengan 1 transaksi / volume ~$0 (STONKS, NIKUMARU, MEMEFORGE di Robinhood; token four-meme bervolume $0.001 di BSC) langsung terbuang di Langkah 1 — jangan buang waktu cek keamanan untuk token mati.
+- **Hasil simulasi: 0 SAFE dari 8 kandidat, 1 DANGER (CHOP), 7 CAUTION.** Itu normal untuk pool berumur menit — radar ini memang dirancang untuk menolak memberkati yang belum terverifikasi, bukan untuk memaksa ada pemenang.
