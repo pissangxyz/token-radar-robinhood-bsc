@@ -150,46 +150,44 @@ Vonis: SAFE/CAUTION/DANGER (skor X/100) — alasan satu kalimat
 - "Bandingin token A vs B" → jalankan Langkah 2–4 untuk keduanya, sajikan berdampingan.
 - **"Sniper token baru" → pakai Mode Sniper di bawah (aturan longgar, target koin baru, jual otomatis saat untung).**
 
-## 6b. MODE SNIPER (aktif — perintah user 2026-11-23 16:14 WIB)
+## 6b. MODE SNIPER v2 (aktif — perintah user 2026-11-23 16:28 WIB)
 
-> "Justru koin baru jadi target buruan, pakai sniper jual otomatis kalau sudah untung. Peraturan jangan terlalu ketat, cukup anti honeypot atau kontrak berbahaya."
+> "Coba tanpa GoPlus, tapi tetap gunakan saat token dibeli — kalau tokennya bermasalah jangan disentuh lagi. Tambah juga auto-sell kalau dev jual dan likuiditas ditarik."
 
-Mode ini MENGGANTIKAN skor ketat (Langkah 4) saat berburu koin baru. Prinsipnya: **masuk cepat, keluar otomatis saat untung, yang penting tidak kena honeypot atau kontrak jahat.**
+Revisi dari v1 berdasarkan pelajaran simulasi: GoPlus terlalu lambat di menit ke-0 (6/8 token belum terindeks bahkan setelah 15 menit) dan gate "kontrak unverified" malah nge-block pemenang (AI +104%, Shit +85%). Jadi v2 membalik urutannya: **masuk dulu dengan gate ringan, verifikasi jalan terus SETELAH beli — dan kalau token ketahuan bermasalah, jual + blacklist selamanya.**
 
 ### Target buruan
-- Pool umur **0–60 menit** yang baru muncul di `new_pools` — makin baru makin bagus. Umur muda di sini BUKAN peringatan, tapi justru target.
-- Kedua chain: Robinhood (pool baru tiap menit, persaingan sepi) dan BSC (ramai, likuiditas lebih besar).
+- Pool umur **0–60 menit** yang baru muncul di `new_pools` — makin baru makin bagus.
 
-### Gate masuk — HANYA ini yang memblokir (sisanya cuma info)
-**BLOCK (jangan sentuh) kalau kena salah satu:**
-1. **Honeypot:** GoPlus `is_honeypot = 1`, `cannot_buy = 1`, `cannot_sell_all = 1`, atau sell tax ≥ 50%; ATAU honeypot.is `isHoneypot = true` (BSC).
-2. **Kontrak berbahaya:** `selfdestruct = 1`, `hidden_owner = 1`, `is_blacklisted = 1`, proxy yang owner-nya bisa ganti tax/saldo (`owner_change_balance = 1`, `slippage_modifiable = 1` dengan owner aktif), ATAU kontrak **tidak terverifikasi** (`is_open_source = 0`).
-3. **Pool mati:** `reserve_in_usd = 0` atau tidak ada pool sama sekali.
+### Gate masuk v2 — TANPA GoPlus, TANPA status verifikasi
+Masuk kalau SEMUA ini terpenuhi (cek via DexScreener/GeckoTerminal saja — cepat, tanpa tunggu indeks):
+1. Pool ada dan **likuiditas (reserve) > 0**.
+2. **Ada buys yang terjadi** (bukan pool mati — minimal 1 buy).
+3. Harga masih bisa dibaca (pair aktif di DexScreener).
 
-**TIDAK lagi jadi gate (hanya dicatat sebagai info):** likuiditas minimum, FDV, volume minimum, jumlah trader unik, konsentrasi holder, buy/sell tax kecil (< 10% masih oke, catat angkanya), umur pool.
+**Yang TIDAK lagi jadi gate masuk:** GoPlus (belum terindeks = bukan alasan menunda), status verifikasi kontrak, likuiditas minimum, FDV, volume minimum, trader unik, konsentrasi holder, tax. Semua itu pindah jadi bahan monitoring pasca-beli.
 
-### Masalah jujur: di menit ke-0, cek keamanan sering BELUM ADA
-Simulasi 2026-11-23 membuktikan: 6 dari 8 token berumur menit **belum terindeks GoPlus**, honeypot.is jawab 404 "pair not found". Sniper yang nunggu verifikasi lengkap akan kehilangan entry awal. Aturan mode ini:
-- Kalau GoPlus/honeypot.is belum terindeks → **BUKAN block otomatis**, tapi wajib cek kontrak langsung via explorer SEBELUM masuk: source terverifikasi? Ada fungsi `mint` / `pause` / `blacklist` / `setTax` / `setFees`? Owner renounced atau masih aktif? Kalau ada fungsi berbahaya + owner aktif → BLOCK.
-- Masuk dengan **ukuran kecil** karena verifikasi belum lengkap, dan catat status "UNVERIFIED" di laporan.
-- Begitu GoPlus/honeypot.is sudah mengindeks (biasanya hitungan menit–jam), cek ulang: kalau ternyata honeypot → keluar segera, jangan tunggu TP.
+### Monitoring pasca-beli — GoPlus tetap dipakai DI SINI
+Begitu posisi masuk, jalanin loop ini terus sampai posisi keluar (polling tiap 1–5 menit, hormati rate limit: DexScreener ~300/menit, GeckoTerminal ~30/menit):
+1. **GoPlus re-check:** begitu GoPlus sudah mengindeks token, baca hasilnya. Kalau `is_honeypot = 1`, `cannot_buy = 1`, `cannot_sell_all = 1`, sell tax ≥ 50%, `selfdestruct = 1`, `hidden_owner = 1`, atau `is_blacklisted = 1` → **auto-sell segera + masukkan ke blacklist (jangan pernah sentuh lagi).**
+2. **Dev-sell watch:** pantau dompet dev/creator (alamat creator dari GoPlus saat sudah terindeks, atau dari transaksi pembuatan pair). Kalau dev menjual — ambang: **penjualan berapa pun dalam 24 jam pertama, atau > 10% dari pegangan dev** → **auto-sell segera + blacklist.** Cara pantau gratis: cek berkala `creator_balance`/`creator_percent` di GoPlus, atau daftar transfer token dari alamat creator di explorer. Jujur: deteksi ini punya jeda polling (hitungan menit) — dev bisa dump duluan sebelum cek berikutnya jalan. Ini mitigasi, bukan jaminan.
+3. **Liquidity-pull watch:** pantau `liquidity.usd` (DexScreener) / `reserve_in_usd` (GeckoTerminal) tiap polling. Kalau likuiditas turun **> 50% dalam 5 menit** atau jatuh di bawah 50% dari likuiditas saat entry → **auto-sell segera.** Jujur: kalau likuiditas ditarik TOTAL sekaligus (kasus 金狗: $141k → $0), tidak ada yang bisa dijual — trigger ini hanya menyelamatkan saat penarikan bertahap/parsial.
+4. **Blacklist permanen:** token yang kena flag pasca-beli (honeypot, kontrak berbahaya, dev rug, LP pull total) dicatat di `blacklist.md` (folder skill ini) dengan alamat, chain, tanggal, dan alasan. **Token di blacklist tidak pernah di-entry lagi, apa pun yang terjadi.** Cek blacklist SEBELUM setiap entry baru.
 
-### Jual otomatis (take profit) — default, bisa diubah user
-- **TP1 +100% (2x): jual 50%** — modal + sebagian untung sudah aman.
-- **TP2 +200% (3x): jual 25% lagi.**
-- **Sisa 25%: trailing stop −30% dari harga puncak** (ikut naik, jual kalau turun 30% dari puncak).
-- **Stop-loss: −50% dari harga entry** (jual semua, jangan dipegang sampai nol).
-- **Max hold 24 jam** kalau tidak kena TP maupun stop-loss → keluar, jangan jadi kolektor token mati.
-- Slippage: catat toleransi sebelum masuk (token baru likuiditas tipis → slippage besar itu normal; sesuaikan dengan ukuran posisi).
+### Jual otomatis (take profit + proteksi) — v2
+- **TP1 +100% (2x): jual 50%. TP2 +200% (3x): jual 25% lagi. Sisa 25%: trailing stop −30% dari puncak.**
+- **Stop-loss −50% dari entry. Max hold 24 jam.**
+- **BARU — auto-sell pemicu darurat (jual semua, segera):** GoPlus pasca-beli flag bahaya; dev jual (ambang di atas); likuiditas turun > 50% dalam 5 menit.
+- Urutan prioritas saat beberapa pemicu kena bersamaan: pemicu darurat > stop-loss > TP.
+- Slippage: catat toleransi sebelum masuk (pool tipis → slippage besar itu normal).
 
-### Position sizing (karena risikonya tinggi)
+### Position sizing
 - Per token: **kecil, maksimal 2–5% dari bankroll sniper**. Jangan all-in satu token.
-- Jangan kejar semua token baru — saring tetap jalan (Langkah 1), sniper hanya masuk yang lolos gate di atas.
 
 ### Batasan eksekusi (penting, jangan dilanggar)
 - Skill ini mendefinisikan **aturan** sniper. Eksekusi live (bot + wallet + gas + dana) adalah langkah terpisah: butuh dana di wallet, dan **setiap transaksi tetap butuh preview + perintah eksplisit user** (aturan wallet yang berlaku). Jangan pernah klaim auto-trading sudah jalan kalau belum di-setup dan disetujui.
 - **Fakta saat ini (2026-11-23): user belum ada dana** — mode sniper disiapkan dulu sebagai strategi; live sniping jalan setelah ada dana + perintah eksplisit untuk deploy.
-- Sniping koin baru itu berburu volatilitas ekstrem: sebagian besar token baru mati/nyaris nol. Take-profit otomatis mengunci untung, tapi TIDAK menghilangkan risiko. Ini bukan saran finansial.
+- **Jujur soal v2: ini "beli dulu, verifikasi kemudian" — risikonya memang lebih tinggi dari v1, itu disengaja.** Mitigasinya adalah ukuran kecil + monitoring pasca-beli yang ketat + auto-sell darurat + blacklist permanen. Bukan saran finansial.
 
 ## 7. Pelajaran dari simulasi live (2026-11-23 16:11 WIB)
 
