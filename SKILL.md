@@ -148,6 +148,48 @@ Vonis: SAFE/CAUTION/DANGER (skor X/100) — alasan satu kalimat
 - "Cek token 0x... di BSC" → Langkah 2–4 untuk alamat itu, satu laporan lengkap.
 - "Pantau token X" → ulang Langkah 2–3 berkala; laporkan HANYA kalau vonis berubah atau ada red flag baru (jangan spam).
 - "Bandingin token A vs B" → jalankan Langkah 2–4 untuk keduanya, sajikan berdampingan.
+- **"Sniper token baru" → pakai Mode Sniper di bawah (aturan longgar, target koin baru, jual otomatis saat untung).**
+
+## 6b. MODE SNIPER (aktif — perintah user 2026-11-23 16:14 WIB)
+
+> "Justru koin baru jadi target buruan, pakai sniper jual otomatis kalau sudah untung. Peraturan jangan terlalu ketat, cukup anti honeypot atau kontrak berbahaya."
+
+Mode ini MENGGANTIKAN skor ketat (Langkah 4) saat berburu koin baru. Prinsipnya: **masuk cepat, keluar otomatis saat untung, yang penting tidak kena honeypot atau kontrak jahat.**
+
+### Target buruan
+- Pool umur **0–60 menit** yang baru muncul di `new_pools` — makin baru makin bagus. Umur muda di sini BUKAN peringatan, tapi justru target.
+- Kedua chain: Robinhood (pool baru tiap menit, persaingan sepi) dan BSC (ramai, likuiditas lebih besar).
+
+### Gate masuk — HANYA ini yang memblokir (sisanya cuma info)
+**BLOCK (jangan sentuh) kalau kena salah satu:**
+1. **Honeypot:** GoPlus `is_honeypot = 1`, `cannot_buy = 1`, `cannot_sell_all = 1`, atau sell tax ≥ 50%; ATAU honeypot.is `isHoneypot = true` (BSC).
+2. **Kontrak berbahaya:** `selfdestruct = 1`, `hidden_owner = 1`, `is_blacklisted = 1`, proxy yang owner-nya bisa ganti tax/saldo (`owner_change_balance = 1`, `slippage_modifiable = 1` dengan owner aktif), ATAU kontrak **tidak terverifikasi** (`is_open_source = 0`).
+3. **Pool mati:** `reserve_in_usd = 0` atau tidak ada pool sama sekali.
+
+**TIDAK lagi jadi gate (hanya dicatat sebagai info):** likuiditas minimum, FDV, volume minimum, jumlah trader unik, konsentrasi holder, buy/sell tax kecil (< 10% masih oke, catat angkanya), umur pool.
+
+### Masalah jujur: di menit ke-0, cek keamanan sering BELUM ADA
+Simulasi 2026-11-23 membuktikan: 6 dari 8 token berumur menit **belum terindeks GoPlus**, honeypot.is jawab 404 "pair not found". Sniper yang nunggu verifikasi lengkap akan kehilangan entry awal. Aturan mode ini:
+- Kalau GoPlus/honeypot.is belum terindeks → **BUKAN block otomatis**, tapi wajib cek kontrak langsung via explorer SEBELUM masuk: source terverifikasi? Ada fungsi `mint` / `pause` / `blacklist` / `setTax` / `setFees`? Owner renounced atau masih aktif? Kalau ada fungsi berbahaya + owner aktif → BLOCK.
+- Masuk dengan **ukuran kecil** karena verifikasi belum lengkap, dan catat status "UNVERIFIED" di laporan.
+- Begitu GoPlus/honeypot.is sudah mengindeks (biasanya hitungan menit–jam), cek ulang: kalau ternyata honeypot → keluar segera, jangan tunggu TP.
+
+### Jual otomatis (take profit) — default, bisa diubah user
+- **TP1 +100% (2x): jual 50%** — modal + sebagian untung sudah aman.
+- **TP2 +200% (3x): jual 25% lagi.**
+- **Sisa 25%: trailing stop −30% dari harga puncak** (ikut naik, jual kalau turun 30% dari puncak).
+- **Stop-loss: −50% dari harga entry** (jual semua, jangan dipegang sampai nol).
+- **Max hold 24 jam** kalau tidak kena TP maupun stop-loss → keluar, jangan jadi kolektor token mati.
+- Slippage: catat toleransi sebelum masuk (token baru likuiditas tipis → slippage besar itu normal; sesuaikan dengan ukuran posisi).
+
+### Position sizing (karena risikonya tinggi)
+- Per token: **kecil, maksimal 2–5% dari bankroll sniper**. Jangan all-in satu token.
+- Jangan kejar semua token baru — saring tetap jalan (Langkah 1), sniper hanya masuk yang lolos gate di atas.
+
+### Batasan eksekusi (penting, jangan dilanggar)
+- Skill ini mendefinisikan **aturan** sniper. Eksekusi live (bot + wallet + gas + dana) adalah langkah terpisah: butuh dana di wallet, dan **setiap transaksi tetap butuh preview + perintah eksplisit user** (aturan wallet yang berlaku). Jangan pernah klaim auto-trading sudah jalan kalau belum di-setup dan disetujui.
+- **Fakta saat ini (2026-11-23): user belum ada dana** — mode sniper disiapkan dulu sebagai strategi; live sniping jalan setelah ada dana + perintah eksplisit untuk deploy.
+- Sniping koin baru itu berburu volatilitas ekstrem: sebagian besar token baru mati/nyaris nol. Take-profit otomatis mengunci untung, tapi TIDAK menghilangkan risiko. Ini bukan saran finansial.
 
 ## 7. Pelajaran dari simulasi live (2026-11-23 16:11 WIB)
 
